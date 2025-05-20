@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    container_name: vietnamese-rag-app
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    environment:
+      - PORT=${PORT:-8000}
+    volumes:
+      - huggingface_cache:/app/.cache/huggingface
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  huggingface_cache:
