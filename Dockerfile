@@ -34,6 +34,7 @@ RUN mkdir -p /app/.cache/huggingface
 # Expose the port the app runs on (default to 8000 if not set)
 ARG PORT=8000
 ENV PORT=${PORT}
+# Only expose the configured port, not the default 8000
 EXPOSE ${PORT}
 
 # Command to run the application
