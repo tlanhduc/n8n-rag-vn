@@ -11,11 +11,6 @@ services:
     volumes:
       - huggingface_cache:/app/.cache/huggingface
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://0.0.0.0:${PORT:-8000}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   huggingface_cache:
