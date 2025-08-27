@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: vietnamese-rag-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main_simple:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: DEBUG
+        value: false
+      - key: EMBEDDING_MODEL
+        value: bkai-foundation-models/vietnamese-bi-encoder
+      - key: MAX_TOKEN_LIMIT
+        value: 128
+      - key: DEFAULT_CHUNK_SIZE
+        value: 110
+      - key: DEFAULT_CHUNK_OVERLAP
+        value: 20
+      - key: DEFAULT_TOP_K
+        value: 5
+      - key: ENABLE_CACHE
+        value: true
+      - key: CACHE_SIZE
+        value: 1000
+      - key: API_PREFIX
+        value: /api
