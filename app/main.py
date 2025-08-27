@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
 
-from app.api.routes import router as api_router
-from app.config import APP_NAME, API_PREFIX, DEBUG
+from app.services.preprocessor_simple import SimpleTextPreprocessor
+from app.services.embeddings_simple import SimpleEmbeddingService
+from app.config import APP_NAME, API_PREFIX, DEBUG, HOST, PORT
 
 # Configure logging
 logging.basicConfig(
@@ -13,6 +14,10 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Initialize services
+preprocessor = SimpleTextPreprocessor()
+embedding_service = SimpleEmbeddingService()
 
 # Create FastAPI app
 app = FastAPI(
@@ -31,10 +36,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add API router
-app.include_router(api_router, prefix=API_PREFIX)
-
-
 # Add middleware for request timing
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
@@ -43,7 +44,6 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)
     return response
-
 
 # Root endpoint
 @app.get("/")
@@ -55,12 +55,53 @@ async def root():
         "api_docs": "/docs",
     }
 
-
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+# API Status endpoint
+@app.get(f"{API_PREFIX}/status")
+async def get_status():
+    """Get server status and configuration."""
+    return {
+        "service": APP_NAME,
+        "status": "running",
+        "debug": DEBUG,
+        "embedding_model": embedding_service.model_name if embedding_service.model else "fallback",
+        "preprocessor": "simple",
+        "cache_enabled": embedding_service.cache is not None
+    }
+
+# Test endpoint
+@app.get(f"{API_PREFIX}/test")
+async def test_endpoint():
+    """Test endpoint to verify the application is working."""
+    try:
+        # Test preprocessor
+        test_text = "Đây là một văn bản tiếng Việt để test. Nó có nhiều câu và từ khác nhau."
+        chunks = preprocessor.create_chunks(test_text, chunk_size=20, chunk_overlap=5)
+        
+        # Test embedding service
+        test_embedding = embedding_service.get_embedding("test text")
+        
+        return {
+            "status": "success",
+            "preprocessor_test": {
+                "input_text": test_text,
+                "chunks_created": len(chunks),
+                "chunks": chunks
+            },
+            "embedding_test": {
+                "input_text": "test text",
+                "embedding_length": len(test_embedding),
+                "embedding_sample": test_embedding[:5] if test_embedding else []
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Test endpoint error: {e}")
+        return {"status": "error", "detail": str(e)}
 
 # Global exception handler
 @app.exception_handler(Exception)
@@ -71,10 +112,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An unexpected error occurred, please try again later"},
     )
 
-
 if __name__ == "__main__":
     import uvicorn
-    from app.config import HOST, PORT
     
     logger.info(f"Starting {APP_NAME} server on {HOST}:{PORT}")
     uvicorn.run("main:app", host=HOST, port=PORT, reload=DEBUG) 
